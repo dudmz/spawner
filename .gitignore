@@ -5,3 +5,8 @@ spawner
 
 # gib dirs
 autom4te.cache/
+
+
+# Added by cargo
+
+/target
