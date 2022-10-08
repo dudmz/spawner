@@ -16,12 +16,4 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
     let prog: Program = Program::new(&args);
-
-
-    log::info!(
-        target: "program",
-        "command: {}, mode: {}",
-        prog.command.unwrap(),
-        prog.opts.mode.unwrap()
-    );
 }
