@@ -5,6 +5,8 @@ use log;
 mod argparser;
 mod lib;
 mod logger;
+mod crawler;
+mod standalone;
 
 use argparser::Program;
 
@@ -16,4 +18,9 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
     let prog: Program = Program::new(&args);
+
+    match prog.execute() {
+        Ok(_) => {},
+        Err(error) => lib::exit(error)
+    };
 }
