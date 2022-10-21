@@ -6,6 +6,7 @@ mod argparser;
 mod lib;
 mod logger;
 mod crawler;
+mod net;
 mod standalone;
 mod url;
 

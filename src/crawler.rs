@@ -1,99 +1,167 @@
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::io::{Read, Write};
-use std::net::{ToSocketAddrs, TcpStream};
-use std::time::Duration;
+use std::net::ToSocketAddrs;
+use std::sync::{Mutex, Arc};
+use std::thread::{self, JoinHandle};
 
-use lazy_static::lazy_static;
-use log::info;
-use openssl::ssl::{SslMethod, SslConnector};
-use regex::Regex;
+use log::{info, error};
 
+use crate::net;
 use crate::url;
 
-const URL_REGEX: &str = r"https?://[-A-Za-z0-9+&@#/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#/%=~_()|]";
 
-pub struct Crawler {
-    start_url: String,
-    depth: u8,
-    frontier: Vec<String>
+trait Request {
+    fn request(&self, url: String, path: String) -> Result<String, Box<dyn Error + Send + Sync>>;
 }
 
-impl Crawler {
-    pub fn new(start_url: String, depth: u8) -> Crawler {
-        Crawler {
-            start_url,
-            depth,
-            frontier: Vec::new()
-        }
-    }
+pub struct CrawlerInner {
+    start_url: String,
+    seen: Arc<Mutex<HashMap<String, HashSet<String>>>>
+}
 
-    // TODO: query robots.txt to know which URIs to NOT crawl
-    fn request(&self, url: String) -> Result<String, std::io::Error> {
-        let ip_addr = match url.to_socket_addrs() {
-            Ok(mut data) => data.next().unwrap(),
-            Err(error) => return Err(error)
-        };
+pub struct Crawler {
+    depth: u8,
+    frontier: Vec<(String, String)>,
+    inner: Arc<Mutex<CrawlerInner>>
+}
+
+impl Request for CrawlerInner {
+    fn request(&self, url: String, path: String) -> Result<String, Box<dyn Error + Send + Sync>> {
+        info!("Requesting data from url \"{}\"", url);
+        let ip_addr = url.to_socket_addrs()?.next().unwrap();
         let hostname = url.split(':').next().unwrap();
-
-        let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
-        let stream = TcpStream::connect_timeout(&ip_addr, Duration::from_millis(5000)).unwrap();
-        let mut stream = connector.connect(hostname, stream).unwrap();
+        let port     = url.split(':').last().unwrap();
+        let mut ssl_stream = net::build_ssl_stream(hostname, ip_addr)?;
 
         let mut headers = HashMap::new();
         headers.insert("Host", hostname);
         headers.insert("Connection", "close");
         let http_header = format!(
-            "GET / HTTP/1.1\r\n{}\r\n\r\n",
+            "GET {} HTTP/1.1\r\n{}\r\n\r\n",
+            path,
             headers
                 .iter()
                 .map(|(key, val)| format!("{}: {}", key, val))
                 .collect::<Vec<_>>()
                 .join("\r\n")
         );
-
-        stream.write(http_header.as_bytes()).expect("could not write to socket");
-        stream.flush().expect("could not flush socket");
+        info!("{}:{}", hostname, port);
 
         let mut response = String::new();
-        stream.read_to_string(&mut response).expect("could not read the response");
+        ssl_stream.write(http_header.as_bytes()).expect("could not write to socket");
+        ssl_stream.flush().expect("could not flush socket");
+        ssl_stream.read_to_string(&mut response).expect("could not read the response");
+
         Ok(response)
     }
+}
 
-    // should extract the base website + URIs
-    fn extract(&self, data: String) -> HashMap<String, HashSet<String>> {
-        let mut res: HashMap<String, HashSet<String>> = HashMap::new();
-        lazy_static! {
-            static ref RE: Regex = Regex::new(URL_REGEX).unwrap();
+impl Crawler {
+    pub fn new(start_url: String, depth: u8) -> Crawler {
+        Crawler {
+            depth,
+            frontier: Vec::new(),
+            inner: Arc::new(Mutex::new(CrawlerInner {
+                start_url,
+                seen: Arc::new(Mutex::new(HashMap::new()))
+            }))
         }
-        let sample: HashSet<String> = RE.find_iter(data.as_str())
-            .into_iter()
-            .map(|x| url::base_url(x.as_str().to_string()))
-            .collect();
-
-        for url in sample.into_iter() {
-            res.insert(url, HashSet::new());
-        }
-
-        for mat in RE.find_iter(data.as_str()).filter(|x| url::is_path(x.as_str().to_string())) {
-            let urls = res.get_mut(url::base_url(mat.as_str().to_string()).as_str());
-            urls.unwrap().insert(mat.as_str().to_string());
-        }
-
-        res
     }
 
-    // cycle through depth: depth -> request -> extract -> store -> next depth
-    pub fn process(&self) -> Result<Vec<String>, std::io::Error> {
-        for _ in 0..self.depth {
+    // cycle through depth: depth -> frontier -> spawn requests -> extract -> store -> next depth
+    pub fn process(&mut self) -> Result<Vec<(String, String)>, Vec<Box<dyn Error + Send + Sync>>> {
+        for i in 0..self.depth {
             // it should be sync at first
-            let data = match self.request(self.start_url.clone()) {
-                Ok(data) => data,
-                Err(error) => return Err(error)
-            };
-            for (k, v) in self.extract(data) {
-                println!("Domain: {} - urls: {:?}\n", k, v);
+            if i == 0 {
+                let data: String;
+                if let Ok(local_self) = self.inner.lock() {
+                    data = match local_self.request(local_self.start_url.clone(), "/".to_string()) {
+                        Ok(data) => data,
+                        Err(error) => {
+                            let mut errors: Vec<Box<dyn Error + Send + Sync>> = vec![];
+                            errors.push(error);
+                            return Err(errors)
+                        }
+                    };
+
+                    if let Ok(mut seen) = local_self.seen.lock() {
+                        for (k, v) in url::extract(data) {
+                            seen.insert(k.to_string(), v.clone());
+                            let to_frontier: Vec<(String, String)> = v.iter()
+                                .map(|url| url::format(url.to_string()))
+                                .collect();
+                            self.frontier.extend(to_frontier);
+                        }
+                    }
+                }
+            } else {
+                let mut threads: Vec<JoinHandle<()>> = vec![];
+                let errors: Arc<Mutex<Vec<Box<dyn Error + Send + Sync>>>> = Arc::new(Mutex::new(vec![]));
+                let new_frontier: Arc<Mutex<Vec<(String, String)>>> = Arc::new(Mutex::new(vec![]));
+
+                for url in self.frontier.clone() {
+                    let errors = Arc::clone(&errors);
+                    let frontier = Arc::clone(&new_frontier);
+                    let local_self = self.inner.clone();
+
+                    // child thread to request each item in the frontier
+                    let child_thread = thread::spawn(move || {
+                        let mut url_data: String = String::from("");
+                        if let Ok(local_self) = local_self.lock() {
+                            match local_self.request(url.0, url.1) {
+                                Ok(data) => {
+                                    url_data = data;
+                                },
+                                Err(error) => {
+                                    if let Ok(mut err) = errors.lock() {
+                                        err.push(error);
+                                    }
+                                }
+                            }
+                        }
+
+                        if !url_data.is_empty() {
+                            for (k, v) in url::extract(url_data.to_string()) {
+                                if let Ok(local_self) = local_self.lock() {
+                                    if let Ok(mut seen) = local_self.seen.lock() {
+                                        if seen.contains_key(k.as_str()) {
+                                            for url in v {
+                                                if !seen.get_mut(k.as_str()).unwrap().contains(url.as_str()) {
+                                                    seen.get_mut(k.as_str()).unwrap().insert(url.to_string());
+                                                    if let Ok(mut frontier) = frontier.lock() {
+                                                        frontier.push(url::format(url.to_string()));
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            seen.insert(k.to_string(), v.clone());
+                                            if let Ok(mut frontier) = frontier.lock() {
+                                                frontier.extend(v.iter().map(|x| url::format(x.to_string())));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    threads.push(child_thread);
+                }
+
+                for child in threads {
+                    match child.join() {
+                        Ok(_) => {},
+                        Err(error) => error!("thread error: {:?}", error)
+                    }
+                }
+
+                if let Ok(frontier) = new_frontier.clone().lock() {
+                    self.frontier.extend(frontier.clone().into_iter())
+                }
             }
         }
+
         Ok(self.frontier.clone())
     }
 }
