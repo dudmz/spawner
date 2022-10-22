@@ -63,7 +63,7 @@ impl Program {
             }
         }
 
-        Program{
+        Self {
             command,
             opts: ProgramOpts::new(args),
         }
@@ -183,7 +183,7 @@ impl ProgramOpts {
             }
         }
 
-        ProgramOpts {
+        Self {
             start_url,
             mode,
             worker
