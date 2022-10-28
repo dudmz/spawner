@@ -1,6 +1,10 @@
 syntax = "proto3";
 package crawling;
 
+service Crawler {
+  rpc CrawlUrl (CrawlingRequest) returns (CrawlingReply);
+}
+
 message CrawlingRequest {
   string host = 1;
   string uri = 2;
@@ -19,3 +23,4 @@ message Extract {
   string domain = 1;
   string uri = 2;
 }
+

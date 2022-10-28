@@ -1,4 +1,4 @@
-use crate::{lib, crawler};
+use crate::{lib, crawler, errors};
 
 pub fn help() {
     println!("
@@ -69,7 +69,7 @@ impl Program {
         }
     }
 
-    pub fn execute(&self) -> Result<(), &'static str> {
+    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command.clone().unwrap().as_str() {
             "serve" => {
                 match self.opts.mode {
@@ -78,7 +78,7 @@ impl Program {
                         Ok(())
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
-                        Err("serve command is noop for standalone mode")
+                        Err(errors::StandaloneServeNoopError.into())
                     }
                     _ => {
                         panic!("unreachable");
@@ -101,7 +101,7 @@ impl Program {
                 }
             }
             &_ => {
-                Err("invalid command")
+                Err(errors::InvalidCommandError.into())
             }
         }
     }
