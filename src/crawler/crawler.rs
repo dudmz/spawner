@@ -3,7 +3,7 @@ use std::error::Error;
 use std::io::{Read, Write};
 use std::net::ToSocketAddrs;
 use std::sync::{Mutex, Arc};
-use std::thread::{self, JoinHandle};
+use std::thread;
 
 use log::error;
 
@@ -126,7 +126,7 @@ impl Crawler {
                     }
                 }
             } else {
-                let mut threads: Vec<JoinHandle<()>> = vec![];
+                let mut threads: Vec<thread::JoinHandle<()>> = vec![];
                 let errors: Arc<Mutex<Vec<Box<dyn Error + Send + Sync>>>> = Arc::new(Mutex::new(vec![]));
                 let new_frontier: Arc<Mutex<Vec<(String, String)>>> = Arc::new(Mutex::new(vec![]));
 

@@ -1,4 +1,4 @@
-use crate::{lib, standalone};
+use crate::{lib, crawler};
 
 pub fn help() {
     println!("
@@ -73,11 +73,11 @@ impl Program {
         match self.command.clone().unwrap().as_str() {
             "serve" => {
                 match self.opts.mode {
-                    lib::CrawlerMode::DISTRIBUTED => {
+                    crawler::lib::CrawlerMode::DISTRIBUTED => {
                         // TODO: write code to start the server
                         Ok(())
                     },
-                    lib::CrawlerMode::STANDALONE => {
+                    crawler::lib::CrawlerMode::STANDALONE => {
                         Err("serve command is noop for standalone mode")
                     }
                     _ => {
@@ -87,12 +87,12 @@ impl Program {
             }
             "start" => {
                 match self.opts.mode {
-                    lib::CrawlerMode::DISTRIBUTED => {
+                    crawler::lib::CrawlerMode::DISTRIBUTED => {
                         // TODO: write code to start the web crawler
                         Ok(())
                     },
-                    lib::CrawlerMode::STANDALONE => {
-                        standalone::execute(self.opts.start_url.clone().unwrap());
+                    crawler::lib::CrawlerMode::STANDALONE => {
+                        crawler::standalone::execute(self.opts.start_url.clone().unwrap());
                         Ok(())
                     }
                     _ => {
@@ -110,14 +110,14 @@ impl Program {
 
 pub struct ProgramOpts {
     pub start_url: Option<String>,
-    pub mode: lib::CrawlerMode,
+    pub mode: crawler::lib::CrawlerMode,
     pub worker: Option<String>
 }
 
 impl ProgramOpts {
     fn new(args: &Vec<String>) -> ProgramOpts {
         let mut start_url: Option<String> = Default::default();
-        let mut mode: lib::CrawlerMode = lib::CrawlerMode::INVALID;
+        let mut mode: crawler::lib::CrawlerMode = crawler::lib::CrawlerMode::INVALID;
         let mut worker: Option<String> = Default::default();
 
         let unmoved_args: &Vec<String> = args;
@@ -133,10 +133,10 @@ impl ProgramOpts {
                 },
                 "--mode" => {
                     mode = match Some(get_arg_value(i, args).clone().as_ref()) {
-                        Some("distributed") => lib::CrawlerMode::DISTRIBUTED,
-                        Some("standalone") => lib::CrawlerMode::STANDALONE,
-                        Some(_) => lib::CrawlerMode::INVALID,
-                        None => lib::CrawlerMode::INVALID,
+                        Some("distributed") => crawler::lib::CrawlerMode::DISTRIBUTED,
+                        Some("standalone") => crawler::lib::CrawlerMode::STANDALONE,
+                        Some(_) => crawler::lib::CrawlerMode::INVALID,
+                        None => crawler::lib::CrawlerMode::INVALID,
                     }
                 },
                 "--worker" => {
@@ -147,7 +147,7 @@ impl ProgramOpts {
         }
 
         match mode {
-            lib::CrawlerMode::INVALID => {
+            crawler::lib::CrawlerMode::INVALID => {
                 help();
                 lib::exit("a valid mode is required")
             },
@@ -165,7 +165,7 @@ impl ProgramOpts {
         match worker {
             Some(_) => {
                 match mode {
-                    lib::CrawlerMode::DISTRIBUTED => {},
+                    crawler::lib::CrawlerMode::DISTRIBUTED => {},
                     _ => {
                         help();
                         lib::exit("worker argument only valid for distributed mode")
@@ -174,7 +174,7 @@ impl ProgramOpts {
             }
             None => {
                 match mode {
-                    lib::CrawlerMode::DISTRIBUTED => {
+                    crawler::lib::CrawlerMode::DISTRIBUTED => {
                         help();
                         lib::exit("worker argument is required for distributed mode")
                     }

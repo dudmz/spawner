@@ -7,7 +7,6 @@ mod lib;
 mod logger;
 mod crawler;
 mod net;
-mod standalone;
 mod url;
 
 use argparser::Program;

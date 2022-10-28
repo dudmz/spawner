@@ -1,4 +1,4 @@
-use std::net::{ToSocketAddrs, TcpStream, SocketAddr};
+use std::net::{TcpStream, SocketAddr};
 use std::time::Duration;
 
 use openssl::ssl::{SslMethod, SslConnector, HandshakeError, SslStream};

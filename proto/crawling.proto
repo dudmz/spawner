@@ -1,0 +1,21 @@
+syntax = "proto3";
+package crawling;
+
+message CrawlingRequest {
+  string host = 1;
+  string uri = 2;
+  int64  depth = 3;
+}
+
+message CrawlingReply {
+  Frontier frontier = 1;
+}
+
+message Frontier {
+  repeated Extract extracts = 1;
+}
+
+message Extract {
+  string domain = 1;
+  string uri = 2;
+}
