@@ -8,5 +8,6 @@ autom4te.cache/
 
 
 # Added by cargo
-
 /target
+
+.idea/
