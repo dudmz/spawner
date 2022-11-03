@@ -12,6 +12,9 @@ the data from the webpages response, we'll be storing it in a binary file instea
 using a database at first. We'll be storing the webpages data using Flatbuffers
 as a binary serializer.
 
+## High-level
+![](assets/01-spawner-highlevel.png)
+
 ## Requirements
 Just `cargo`, and `protobuf`
 
