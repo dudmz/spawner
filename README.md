@@ -8,6 +8,7 @@ like, so Rust is the way to go.
 
 ## High-level
 ![](assets/01-spawner-highlevel.png)
+
 The high-level description of the inner workings of the crawler are the following:
 
 1. A CLI program parses the user's input to coordinate the crawler's actions. It
