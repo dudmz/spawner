@@ -20,8 +20,8 @@ impl Crawler for CrawlingStruct {
         request: Request<CrawlingRequest>,
     ) -> Result<Response<CrawlingReply>, Status> {
         // TODO: make crawling errors recoverable
-        let data = standalone::execute(request.get_ref().host).expect("could not crawl using distributed mode");
-        let frontier: Vec<Extract> = vec![];
+        let data = standalone::execute(request.get_ref().host.clone()).expect("could not crawl using distributed mode");
+        let mut frontier: Vec<Extract> = vec![];
 
         for (domain, uri) in data {
             frontier.push(

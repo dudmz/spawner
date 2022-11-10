@@ -5,6 +5,7 @@ use log;
 mod argparser;
 mod crawler;
 mod errors;
+mod frontier;
 mod grpc;
 mod lib;
 mod logger;
