@@ -1,7 +1,7 @@
 use log::{info, error};
 
-use crate::crawler::crawler::Crawler;
-use crate::frontier::frontier::Frontier;
+use crate::crawler::lib::Crawler;
+use crate::frontier::lib::Frontier;
 use crate::errors::StandaloneServeUnreachableError;
 
 // execute starts the loop execution of the crawler through `process`
@@ -11,7 +11,7 @@ pub fn execute(start_url: String) -> Result<Vec<(String, String)>, Box<dyn std::
     let mut front = Frontier::new();
     match krwlr.process() {
         Ok(data) => {
-            front.sync(data.clone());
+            _ = front.sync(data.clone());
             info!("data: {:?}", data);
         },
         Err(error) => {
