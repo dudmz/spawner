@@ -5,11 +5,12 @@ use log;
 mod argparser;
 mod crawler;
 mod errors;
-mod grpc;
+mod frontier;
 mod lib;
 mod logger;
 mod net;
 mod url;
+mod web;
 
 use argparser::Program;
 

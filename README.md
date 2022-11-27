@@ -55,11 +55,10 @@ created just yet, so it doesn't follow any rules. Also, we don't have the `Resul
 just yet. So there's a lot of work to be done.
 
 ## Requirements
-Just `cargo`, and `protobuf`
+Just `cargo`.
 
 ```bash
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-$ brew install protobuf
 ```
 
 ## Usage
