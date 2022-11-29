@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::{lib, crawler, errors};
 
 pub fn help() {
@@ -69,13 +71,12 @@ impl Program {
         }
     }
 
-    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match self.command.clone().unwrap().as_str() {
             "serve" => {
                 match self.opts.mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        // TODO: write code to start the server
-                        Ok(())
+                        crawler::distributed::serve(self.opts.start_url.clone().unwrap())
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
                         Err(errors::StandaloneServeNoopError.into())

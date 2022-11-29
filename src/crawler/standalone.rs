@@ -11,7 +11,7 @@ pub fn execute(start_url: String) -> Result<Vec<(String, String)>, Box<dyn std::
     let mut front = Frontier::new();
     match krwlr.process() {
         Ok(data) => {
-            _ = front.sync(data.clone());
+            front.sync(data.clone());
             info!("data: {:?}", data);
         },
         Err(error) => {
