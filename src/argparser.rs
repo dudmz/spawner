@@ -103,7 +103,7 @@ impl Program {
                         Ok(())
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
-                        crawler::standalone::execute(self.opts.start_url.clone().unwrap());
+                        crawler::standalone::execute(self.opts.start_url.clone().unwrap())?;
                         Ok(())
                     }
                     _ => {
@@ -114,7 +114,7 @@ impl Program {
             "connect" => {
                 match self.opts.mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        crawler::distributed::execute(self.opts.web_url.clone().unwrap());
+                        crawler::distributed::execute(self.opts.web_url.clone().unwrap())?;
                         Ok(())
                     },
                     _ => {

@@ -34,16 +34,16 @@ impl Web {
     }
 
     pub fn listen(&mut self, url: String) -> Result<(), Box<dyn std::error::Error>> {
-        if let mut local_self = self.inner.lock().unwrap() {
+        if let Ok(mut local_self) = self.inner.lock() {
             local_self.listener = match TcpListener::bind(url) {
                 Ok(listener) => Some(listener),
                 Err(error) => return Err(error.into())
             };
         };
 
-        let mut web = self.clone();
+        let web = self.clone();
         let web_thread = thread::spawn(move || {
-            if let mut local_self = web.inner.lock().unwrap() {
+            if let Ok(mut local_self) = web.inner.lock() {
                 loop {
                     // stop registering crawlers if workers_no reached its limit
                     if local_self.workers_no == 0 {

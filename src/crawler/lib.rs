@@ -64,7 +64,7 @@ impl Request for CrawlerInner {
 
 impl Crawler {
     pub fn new(start_url: String, depth: u8) -> Result<Crawler, Box<dyn std::error::Error>> {
-        let mut bind = match TcpListener::bind("127.0.0.1:6078") {
+        let bind = match TcpListener::bind("127.0.0.1:6078") {
             Ok(bind) => bind,
             Err(error) => {
                 error!("could not establish bind connection to local port 6078");
@@ -119,7 +119,7 @@ impl Crawler {
         let _ = TcpStream::connect(web_url)?;
         let instance = self.clone();
 
-        if let local_self = instance.inner.lock().unwrap() {
+        if let Ok(local_self) = instance.inner.lock() {
             match local_self.listener.as_ref().unwrap().accept() {
                 Ok((_socket, addr)) => {
                     info!("web attempted to establish connection to node");
