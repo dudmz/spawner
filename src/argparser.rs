@@ -75,7 +75,7 @@ impl Program {
         }
     }
 
-    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command.clone().unwrap().as_str() {
             "serve" => {
                 match self.opts.mode {

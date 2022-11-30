@@ -1,9 +1,7 @@
-use std::net::TcpStream;
-
 use crate::crawler::lib::Crawler;
 use crate::web::lib::Web;
 
-pub fn serve(url: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+pub fn serve(url: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut web = Web::new();
     match web.listen(url) {
         Ok(()) => {},
