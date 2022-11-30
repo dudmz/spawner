@@ -68,15 +68,18 @@ usage: spawner [OPTIONS] --mode MODE COMMAND
 
 OPTIONS:
 
---start-url\tURL where spawner will crawl first
---worker\tAddress to worker with port, if using distributed mode
+--start-url URL where spawner will crawl first
+--publish   Address with port to expose the web instance to the network
+--web-url   Address with port to connect to the web instance in the network
 
 MODE:
 
-standalone\tSingle node executor
-distributed\tMultiple node executor, must have --worker OPT set
+standalone  Single node executor
+distributed Multiple node executor, must have --publish or --web-url set depending of command
 
 COMMAND:
 
-start\tWell, start crawling, right?
+start   Well, start crawling, right?
+serve   Start a web instance, only available in distributed mode
+connect Start a node instance, and connect to the web instance, only available in distributed mode
 ```
