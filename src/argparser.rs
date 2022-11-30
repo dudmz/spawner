@@ -53,6 +53,7 @@ impl Program {
         for arg in args {
             match arg.as_ref() {
                 "start" => command = Some(arg.to_owned()),
+                "serve" => command = Some(arg.to_owned()),
                 _ => {},
             }
         }
@@ -76,7 +77,7 @@ impl Program {
             "serve" => {
                 match self.opts.mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        crawler::distributed::serve(self.opts.start_url.clone().unwrap())
+                        crawler::distributed::serve()
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
                         Err(errors::StandaloneServeNoopError.into())
@@ -112,14 +113,14 @@ impl Program {
 pub struct ProgramOpts {
     pub start_url: Option<String>,
     pub mode: crawler::lib::CrawlerMode,
-    pub worker: Option<String>
+    pub publish: Option<String>
 }
 
 impl ProgramOpts {
     fn new(args: &Vec<String>) -> ProgramOpts {
         let mut start_url: Option<String> = Default::default();
         let mut mode: crawler::lib::CrawlerMode = crawler::lib::CrawlerMode::INVALID;
-        let mut worker: Option<String> = Default::default();
+        let mut publish: Option<String> = Default::default();
 
         let unmoved_args: &Vec<String> = args;
 
@@ -140,8 +141,8 @@ impl ProgramOpts {
                         None => crawler::lib::CrawlerMode::INVALID,
                     }
                 },
-                "--worker" => {
-                    worker = Some(get_arg_value(i, unmoved_args).clone());
+                "--publish" => {
+                    publish = Some(get_arg_value(i, unmoved_args).clone());
                 }
                 _ => {},
             }
@@ -163,13 +164,13 @@ impl ProgramOpts {
             }
         }
 
-        match worker {
+        match publish {
             Some(_) => {
                 match mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {},
                     _ => {
                         help();
-                        lib::exit("worker argument only valid for distributed mode")
+                        lib::exit("publish argument only valid for distributed mode")
                     }
                 }
             }
@@ -177,7 +178,7 @@ impl ProgramOpts {
                 match mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
                         help();
-                        lib::exit("worker argument is required for distributed mode")
+                        lib::exit("publish argument is required for distributed mode")
                     }
                     _ => {}
                 }
@@ -187,7 +188,7 @@ impl ProgramOpts {
         Self {
             start_url,
             mode,
-            worker
+            publish
         }
     }
 }
