@@ -33,3 +33,13 @@ impl std::fmt::Display for StandaloneServeUnreachableError {
 
 impl std::error::Error for StandaloneServeUnreachableError {}
 
+#[derive(Debug, Clone)]
+pub struct DistributedServePublishRequiredError;
+
+impl std::fmt::Display for DistributedServePublishRequiredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "publish argument required when running web instance")
+    }
+}
+
+impl std::error::Error for DistributedServePublishRequiredError {}

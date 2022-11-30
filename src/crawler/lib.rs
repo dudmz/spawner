@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::io::{Read, Write};
-use std::net::ToSocketAddrs;
+use std::net::{ToSocketAddrs, TcpListener, TcpStream};
 use std::sync::{Mutex, Arc};
 use std::thread;
 
-use log::error;
+use log::{error, info};
 
 use crate::net;
 use crate::url;
@@ -22,14 +22,15 @@ trait Request {
 
 pub struct CrawlerInner {
     start_url: String,
-    seen: Arc<Mutex<HashMap<String, HashSet<String>>>>
+    seen: Arc<Mutex<HashMap<String, HashSet<String>>>>,
+    listener: Option<TcpListener>,
 }
 
 #[derive(Clone)]
 pub struct Crawler {
     depth: u8,
     frontier: Vec<(String, String)>,
-    inner: Arc<Mutex<CrawlerInner>>
+    inner: Arc<Mutex<CrawlerInner>>,
 }
 
 impl Request for CrawlerInner {
@@ -62,15 +63,24 @@ impl Request for CrawlerInner {
 }
 
 impl Crawler {
-    pub fn new(start_url: String, depth: u8) -> Crawler {
-        Self {
+    pub fn new(start_url: String, depth: u8) -> Result<Crawler, Box<dyn std::error::Error>> {
+        let mut bind = match TcpListener::bind("127.0.0.1:6078") {
+            Ok(bind) => bind,
+            Err(error) => {
+                error!("could not establish bind connection to local port 6078");
+                return Err(error.into())
+            }
+        };
+
+        Ok(Self {
             depth,
             frontier: Vec::new(),
             inner: Arc::new(Mutex::new(CrawlerInner {
                 start_url,
-                seen: Arc::new(Mutex::new(HashMap::new()))
+                seen: Arc::new(Mutex::new(HashMap::new())),
+                listener: Some(bind)
             }))
-        }
+        })
     }
 
     // extract_urls extracts the "base_url:port" from the crawler response, along with their
@@ -103,7 +113,25 @@ impl Crawler {
     // TODO: Evaluate domains and rank them according to number of references in each iteration
     fn evaluate_urls(&mut self) {}
 
-    pub fn connect(&mut self, web_url: String) {}
+    // connect triggers a connection to be established in web, thus making it aware of
+    // the crawler's existence, and keeping its address
+    pub fn connect(&mut self, web_url: String) -> Result<(), Box<dyn std::error::Error>> {
+        let _ = TcpStream::connect(web_url)?;
+        let instance = self.clone();
+
+        if let local_self = instance.inner.lock().unwrap() {
+            match local_self.listener.as_ref().unwrap().accept() {
+                Ok((_socket, addr)) => {
+                    info!("web attempted to establish connection to node");
+                    info!("web: {:?}", addr);
+                }
+            Err(error) => {
+                error!("listening to port 6077: {error:?}");
+            }
+            }
+        }        
+        Ok(())
+    }
 
     // process executes the crawling cycle through determined depth
     // process -> depth -> frontier -> spawn requests -> extract -> eval -> store -> next depth

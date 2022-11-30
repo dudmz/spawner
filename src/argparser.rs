@@ -1,4 +1,4 @@
-use log::info;
+use log::warn;
 
 use crate::{lib, crawler, errors};
 
@@ -9,17 +9,19 @@ usage: spawner [OPTIONS] --mode MODE COMMAND
 OPTIONS:
 
 --start-url\tURL where spawner will crawl first
---worker\tAddress to worker with port, if using distributed mode
+--publish\tAddress with port to expose the web instance to the network
+--web-url\tAddress with port to connect to the web instance in the network
 
 MODE:
 
 standalone\tSingle node executor
-distributed\tMultiple node executor, must have --worker OPT set
+distributed\tMultiple node executor, must have --publish or --web-url set depending of command
 
 COMMAND:
 
 start\tWell, start crawling, right?
-serve\tStart a node instance, only available in distributed mode
+serve\tStart a web instance, only available in distributed mode
+connect\tStart a node instance, only available in distributed mode
     ");
 }
 
@@ -54,6 +56,7 @@ impl Program {
             match arg.as_ref() {
                 "start" => command = Some(arg.to_owned()),
                 "serve" => command = Some(arg.to_owned()),
+                "connect" => command = Some(arg.to_owned()),
                 _ => {},
             }
         }
@@ -77,7 +80,13 @@ impl Program {
             "serve" => {
                 match self.opts.mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        crawler::distributed::serve()
+                        match self.opts.publish.clone() {
+                            Some(url) => crawler::distributed::serve(url),
+                            None => {
+                                help();
+                                Err(errors::DistributedServePublishRequiredError.into())
+                            }
+                        }
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
                         Err(errors::StandaloneServeNoopError.into())
@@ -90,7 +99,7 @@ impl Program {
             "start" => {
                 match self.opts.mode {
                     crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        // TODO: write code to start the web crawler
+                        warn!("start command used in distributed mode, please use CONNECT to actually start the crawling process");
                         Ok(())
                     },
                     crawler::lib::CrawlerMode::STANDALONE => {
@@ -99,6 +108,19 @@ impl Program {
                     }
                     _ => {
                         panic!("unreachable");
+                    }
+                }
+            },
+            "connect" => {
+                match self.opts.mode {
+                    crawler::lib::CrawlerMode::DISTRIBUTED => {
+                        crawler::distributed::execute(self.opts.web_url.clone().unwrap());
+                        Ok(())
+                    },
+                    _ => {
+                        help();
+                        lib::exit("connect command only available for distributed mode");
+                        Ok(())
                     }
                 }
             }
@@ -113,7 +135,8 @@ impl Program {
 pub struct ProgramOpts {
     pub start_url: Option<String>,
     pub mode: crawler::lib::CrawlerMode,
-    pub publish: Option<String>
+    pub publish: Option<String>,
+    pub web_url: Option<String>
 }
 
 impl ProgramOpts {
@@ -121,6 +144,7 @@ impl ProgramOpts {
         let mut start_url: Option<String> = Default::default();
         let mut mode: crawler::lib::CrawlerMode = crawler::lib::CrawlerMode::INVALID;
         let mut publish: Option<String> = Default::default();
+        let mut web_url: Option<String> = Default::default();
 
         let unmoved_args: &Vec<String> = args;
 
@@ -144,6 +168,9 @@ impl ProgramOpts {
                 "--publish" => {
                     publish = Some(get_arg_value(i, unmoved_args).clone());
                 }
+                "--web-url" => {
+                    web_url = Some(get_arg_value(i, unmoved_args).clone());
+                }
                 _ => {},
             }
         }
@@ -160,35 +187,15 @@ impl ProgramOpts {
             Some(_) => {},
             None => {
                 help();
-                lib::exit("start_url is required");
-            }
-        }
-
-        match publish {
-            Some(_) => {
-                match mode {
-                    crawler::lib::CrawlerMode::DISTRIBUTED => {},
-                    _ => {
-                        help();
-                        lib::exit("publish argument only valid for distributed mode")
-                    }
-                }
-            }
-            None => {
-                match mode {
-                    crawler::lib::CrawlerMode::DISTRIBUTED => {
-                        help();
-                        lib::exit("publish argument is required for distributed mode")
-                    }
-                    _ => {}
-                }
+                lib::exit("start_url is required")
             }
         }
 
         Self {
             start_url,
             mode,
-            publish
+            publish,
+            web_url
         }
     }
 }
