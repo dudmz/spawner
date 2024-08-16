@@ -1,0 +1,11 @@
+# TODO
+- [] CLI, args, and mode
+- [] Sequential requests and responses
+- [] *MILESTONE*: Standalone crawler (client only)
+- [] GRPC server (limit to one)
+- [] GRPC client that sends URLs to server for crawling
+- [] *MILESTONE*: Distributed crawler (client and server)
+- [] Request retry logic (upon request failure)
+- [] Parallel requests and responses (controlled by predefined amount of requests at once)
+- [] *MILESTONE*: Standalone crawler with parallel requests
+- [] *MILESTONE*: Distributed crawler with parallel requests
