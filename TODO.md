@@ -1,5 +1,5 @@
 # TODO
-- [] Build setup
+- [x] Build setup
 - [] CLI, args, and mode
 - [] Sequential requests and responses
 - [] *MILESTONE*: Standalone crawler (client only)
